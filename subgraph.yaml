@@ -1,0 +1,62 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: PlasmaVault
+    network: arbitrum-one
+    source:
+      address: "0x7fbfd8cda97c0221b39c581c34afd24c523a3990"
+      abi: PlasmaVault
+      startBlock: 266838944
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Approval
+        - AuthorityUpdated
+        - Deposit
+        - Initialized
+        - ManagementFeeDataConfigured
+        - ManagementFeeRealized
+        - MarketBalancesUpdated
+        - MarketSubstratesGranted
+        - PerformanceFeeDataConfigured
+        - PriceOracleMiddlewareChanged
+        - Transfer
+        - Withdraw
+        - WithdrawManagerChanged
+      abis:
+        - name: PlasmaVault
+          file: ./abis/PlasmaVault.json
+      eventHandlers:
+        - event: Approval(indexed address,indexed address,uint256)
+          handler: handleApproval
+        - event: AuthorityUpdated(address)
+          handler: handleAuthorityUpdated
+        - event: Deposit(indexed address,indexed address,uint256,uint256)
+          handler: handleDeposit
+        - event: Initialized(uint64)
+          handler: handleInitialized
+        - event: ManagementFeeDataConfigured(address,uint256)
+          handler: handleManagementFeeDataConfigured
+        - event: ManagementFeeRealized(uint256,uint256)
+          handler: handleManagementFeeRealized
+        - event: MarketBalancesUpdated(uint256[],int256)
+          handler: handleMarketBalancesUpdated
+        - event: MarketSubstratesGranted(uint256,bytes32[])
+          handler: handleMarketSubstratesGranted
+        - event: PerformanceFeeDataConfigured(address,uint256)
+          handler: handlePerformanceFeeDataConfigured
+        - event: PriceOracleMiddlewareChanged(address)
+          handler: handlePriceOracleMiddlewareChanged
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+        - event: Withdraw(indexed address,indexed address,indexed address,uint256,uint256)
+          handler: handleWithdraw
+        - event: WithdrawManagerChanged(address)
+          handler: handleWithdrawManagerChanged
+      file: ./src/plasma-vault.ts
