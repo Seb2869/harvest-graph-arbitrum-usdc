@@ -5,6 +5,7 @@
     "deploy-studio": "graph codegen && graph build && graph deploy -l v0.0.2 harvest-plasma-usdc-arbitrum && npm run after-deploy",
     "deploy-studio-test": "graph codegen && graph build && graph deploy -l 0.0.16 harvest-plasma-usdc-arbitrum-test",
     "codegen": "graph codegen",
+    "after-deploy": "./deploy.sh",
     "build": "graph build",
     "deploy": "graph deploy --node https://api.studio.thegraph.com/deploy/ arbitrum-plasma",
     "create-local": "graph create --node http://localhost:8020/ arbitrum-plasma",
