@@ -3,6 +3,14 @@
     "PlasmaVault": {
       "address": "0x7fbfd8cda97c0221b39c581c34afd24c523a3990",
       "startBlock": 266838944
+    },
+    "Controller": {
+      "address": "0x68B2FC1566f411C1Af8fF5bFDA3dD4F3F3e59D03",
+      "startBlock": 266838944
+    },
+    "MegaFactory": {
+      "address": "0x344aecfdb8894e82178bc45ce35ff7741b6aa527",
+      "startBlock": 266838944
     }
   }
 }

@@ -1,229 +1,154 @@
-import {
-  Approval as ApprovalEvent,
-  AuthorityUpdated as AuthorityUpdatedEvent,
-  Deposit as DepositEvent,
-  Initialized as InitializedEvent,
-  ManagementFeeDataConfigured as ManagementFeeDataConfiguredEvent,
-  ManagementFeeRealized as ManagementFeeRealizedEvent,
-  MarketBalancesUpdated as MarketBalancesUpdatedEvent,
-  MarketSubstratesGranted as MarketSubstratesGrantedEvent,
-  PerformanceFeeDataConfigured as PerformanceFeeDataConfiguredEvent,
-  PriceOracleMiddlewareChanged as PriceOracleMiddlewareChangedEvent,
-  Transfer as TransferEvent,
-  Withdraw as WithdrawEvent,
-  WithdrawManagerChanged as WithdrawManagerChangedEvent
-} from "../generated/PlasmaVault/PlasmaVault"
-import {
-  Approval,
-  AuthorityUpdated,
-  Deposit,
-  Initialized,
-  ManagementFeeDataConfigured,
-  ManagementFeeRealized,
-  MarketBalancesUpdated,
-  MarketSubstratesGranted,
-  PerformanceFeeDataConfigured,
-  PriceOracleMiddlewareChanged,
-  Transfer,
-  Withdraw,
-  WithdrawManagerChanged
-} from "../generated/schema"
+import { MarketBalancesUpdated, Transfer } from '../generated/PlasmaVault/PlasmaVault';
+import { PlasmaVault, PlasmaVaultHistory, UserBalance, UserBalanceHistory, Vault } from '../generated/schema';
+import { Address, BigDecimal, BigInt, log } from '@graphprotocol/graph-ts';
+import { stringIdToBytes } from './utils/IdUtils';
+import { PlasmaVaultContract } from '../generated/PlasmaVault/PlasmaVaultContract';
+import { pow, powBI } from './utils/MathUtils';
+import { FuseContract } from '../generated/PlasmaVault/FuseContract';
+import { BD_ONE_HUNDRED, BD_TEN, BD_ZERO } from './utils/Constant';
+import { getOrCreateVault } from './utils/VaultUtils';
 
-export function handleApproval(event: ApprovalEvent): void {
-  let entity = new Approval(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.owner = event.params.owner
-  entity.spender = event.params.spender
-  entity.value = event.params.value
+export function handleTransfer(event: Transfer): void {
+  const vaultContract = PlasmaVaultContract.bind(event.address);
+  let vault = PlasmaVault.load(event.address.toHexString());
+  if (vault == null) {
+    vault = new PlasmaVault(event.address.toHexString());
+    vault.name = vaultContract.name();
+    vault.symbol = vaultContract.symbol();
+    vault.decimals = vaultContract.decimals();
+    vault.tvl = BigDecimal.zero();
+    vault.apy = BigDecimal.zero();
+    vault.assetOld = BigDecimal.zero();
+    vault.assetNew = BigDecimal.zero();
+    vault.allocDatas = [];
+    vault.newAllocDatas = [];
+    vault.timestamp = event.block.timestamp;
+    vault.createAtBlock = event.block.number;
+  }
+  createUserBalance(event.params.from, event.params.value, event.block.timestamp, false);
+  createUserBalance(event.params.to, event.params.value, event.block.timestamp, true);
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
+  vault.tvl = vaultContract.totalAssets().divDecimal(pow(BD_TEN, vault.decimals));
+  vault.save();
 }
 
-export function handleAuthorityUpdated(event: AuthorityUpdatedEvent): void {
-  let entity = new AuthorityUpdated(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.authority = event.params.authority
+export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void {
+  const vaultContract = PlasmaVaultContract.bind(event.address);
+  let vault = PlasmaVault.load(event.address.toHexString());
+  if (vault == null) {
+    vault = new PlasmaVault(event.address.toHexString());
+    vault.name = vaultContract.name();
+    vault.symbol = vaultContract.symbol();
+    vault.decimals = vaultContract.decimals();
+    vault.tvl = BigDecimal.zero();
+    vault.apy = BigDecimal.zero();
+    vault.assetOld = BigDecimal.zero();
+    vault.assetNew = BigDecimal.zero();
+    vault.allocDatas = [];
+    vault.newAllocDatas = [];
+    vault.timestamp = event.block.timestamp;
+    vault.createAtBlock = event.block.number;
+    vault.save();
+  }
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
+  let assetOld = BigDecimal.zero();
+  let assetNew = BigDecimal.zero();
+  const allocDatas: BigDecimal[] = [];
+  const newAllocDatas: BigDecimal[] = [];
+  let totalSharePrice = BigInt.zero();
 
-  entity.save()
+  const fuses = vaultContract.getInstantWithdrawalFuses();
+  for (let i = 0; i < fuses.length; i++) {
+    const fuseContract = FuseContract.bind(fuses[i]);
+    const marketId = fuseContract.MARKET_ID();
+    // TODO change logic
+    const pVaultTemp = vaultContract.getInstantWithdrawalFusesParams(fuses[i], BigInt.fromI32(i))[1].toHexString().slice(26)
+
+    // let pVaultHH = '';
+    // for (let j = 0; j < pVaultTemp.length; j++) {
+    //   if (pVaultTemp.charAt(j) !== '0') {
+    //     pVaultHH = pVaultTemp.slice(j);
+    //     break;
+    //   }
+    // }
+    const pVault = '0x' + pVaultTemp
+
+    log.log(log.Level.INFO, `Fetch vault ${pVault}`);
+    log.log(log.Level.INFO, `Market id ${marketId.toString()}`);
+
+    const hVault = getOrCreateVault(Address.fromString(pVault), event.block.timestamp);
+    totalSharePrice = totalSharePrice.plus(hVault.sharePrice);
+
+    if (hVault != null) {
+      log.log(log.Level.INFO, `Vault ${pVault} found, market id ${marketId.toString()}`);
+      const marketInAssetOnchain = vaultContract.totalAssetsInMarket(marketId).toBigDecimal();
+      const marketInAsset = marketInAssetOnchain.div(pow(BD_TEN, vault.decimals));
+      assetOld = assetOld.plus(marketInAsset);
+      const tempAssetNew = marketInAsset.times(BD_ONE_HUNDRED.plus(hVault.apy));
+      log.log(log.Level.INFO, `asset ${tempAssetNew.toString()}, apy ${hVault.apy.toString()}`);
+      if (tempAssetNew.gt(BD_ZERO)) {
+        assetNew = assetNew.plus(tempAssetNew.div(BD_ONE_HUNDRED));
+      }
+      allocDatas.push(marketInAsset);
+    } else {
+      log.log(log.Level.WARNING, `Can not find vault ${pVault}`);
+    }
+  }
+
+  for (let i = 0; i < allocDatas.length; i++) {
+    if (allocDatas[i].gt(BD_ZERO) && assetOld.gt(BD_ZERO)) {
+      newAllocDatas.push(allocDatas[i].div(assetOld).times(BD_ONE_HUNDRED));
+    } else {
+      newAllocDatas.push(BD_ZERO);
+    }
+  }
+
+  let apy = BigDecimal.zero();
+  if (assetOld.gt(BD_ZERO)) {
+    apy = assetNew.minus(assetOld).div(assetOld).times(BD_ONE_HUNDRED);
+  }
+
+  vault.assetOld = assetOld;
+  vault.assetNew = assetNew;
+  vault.apy = apy;
+  vault.allocDatas = allocDatas;
+  vault.newAllocDatas = newAllocDatas;
+  vault.save();
+
+  const vaultHistory = new PlasmaVaultHistory(stringIdToBytes(`${event.transaction.hash.toHex()}-${event.address.toHexString()}`));
+  vaultHistory.tvl = vault.tvl;
+  vaultHistory.apy = vault.apy;
+  vaultHistory.priceUnderlying = BigDecimal.fromString('1');
+  vaultHistory.sharePrice = totalSharePrice.div(BigInt.fromI32(allocDatas.length));
+  vaultHistory.assetOld = vault.assetOld;
+  vaultHistory.assetNew = vault.assetNew;
+  vaultHistory.allocDatas = vault.allocDatas;
+  vaultHistory.newAllocDatas = vault.newAllocDatas;
+  vaultHistory.timestamp = event.block.timestamp;
+  vaultHistory.createAtBlock = event.block.number;
+  vaultHistory.save();
 }
 
-export function handleDeposit(event: DepositEvent): void {
-  let entity = new Deposit(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.sender = event.params.sender
-  entity.owner = event.params.owner
-  entity.assets = event.params.assets
-  entity.shares = event.params.shares
+function createUserBalance(user: Address, amount: BigInt, timestamp: BigInt, isDeposit: boolean): void {
+  let userBalance = UserBalance.load(stringIdToBytes(user.toHexString()));
+  if (userBalance == null) {
+    userBalance = new UserBalance(stringIdToBytes(user.toHexString()));
+    userBalance.userAddress = user.toHexString();
+    userBalance.value = BigDecimal.zero();
+    userBalance.timestamp = timestamp;
+  }
 
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
+  if (isDeposit) {
+    userBalance.value = userBalance.value.plus(amount.toBigDecimal());
+  } else {
+    userBalance.value = userBalance.value.minus(amount.toBigDecimal());
+  }
 
-  entity.save()
-}
+  userBalance.save();
 
-export function handleInitialized(event: InitializedEvent): void {
-  let entity = new Initialized(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.version = event.params.version
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleManagementFeeDataConfigured(
-  event: ManagementFeeDataConfiguredEvent
-): void {
-  let entity = new ManagementFeeDataConfigured(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.feeAccount = event.params.feeAccount
-  entity.feeInPercentage = event.params.feeInPercentage
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleManagementFeeRealized(
-  event: ManagementFeeRealizedEvent
-): void {
-  let entity = new ManagementFeeRealized(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.unrealizedFeeInUnderlying = event.params.unrealizedFeeInUnderlying
-  entity.unrealizedFeeInShares = event.params.unrealizedFeeInShares
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleMarketBalancesUpdated(
-  event: MarketBalancesUpdatedEvent
-): void {
-  let entity = new MarketBalancesUpdated(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.marketIds = event.params.marketIds
-  entity.deltaInUnderlying = event.params.deltaInUnderlying
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleMarketSubstratesGranted(
-  event: MarketSubstratesGrantedEvent
-): void {
-  let entity = new MarketSubstratesGranted(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.marketId = event.params.marketId
-  entity.substrates = event.params.substrates
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handlePerformanceFeeDataConfigured(
-  event: PerformanceFeeDataConfiguredEvent
-): void {
-  let entity = new PerformanceFeeDataConfigured(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.feeAccount = event.params.feeAccount
-  entity.feeInPercentage = event.params.feeInPercentage
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handlePriceOracleMiddlewareChanged(
-  event: PriceOracleMiddlewareChangedEvent
-): void {
-  let entity = new PriceOracleMiddlewareChanged(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.newPriceOracleMiddleware = event.params.newPriceOracleMiddleware
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleTransfer(event: TransferEvent): void {
-  let entity = new Transfer(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.from = event.params.from
-  entity.to = event.params.to
-  entity.value = event.params.value
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleWithdraw(event: WithdrawEvent): void {
-  let entity = new Withdraw(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.sender = event.params.sender
-  entity.receiver = event.params.receiver
-  entity.owner = event.params.owner
-  entity.assets = event.params.assets
-  entity.shares = event.params.shares
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
-}
-
-export function handleWithdrawManagerChanged(
-  event: WithdrawManagerChangedEvent
-): void {
-  let entity = new WithdrawManagerChanged(
-    event.transaction.hash.concatI32(event.logIndex.toI32())
-  )
-  entity.newWithdrawManager = event.params.newWithdrawManager
-
-  entity.blockNumber = event.block.number
-  entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash
-
-  entity.save()
+  const userBalanceHistory = new UserBalanceHistory(stringIdToBytes(`${user.toHexString()}-${timestamp.toString()}-${amount.toString()}`));
+  userBalanceHistory.userAddress = user.toHexString();
+  userBalanceHistory.value = userBalance.value;
+  userBalanceHistory.timestamp = timestamp;
+  userBalanceHistory.save();
 }

@@ -1,119 +1,76 @@
-type Approval @entity(immutable: true) {
-  id: Bytes!
-  owner: Bytes! # address
-  spender: Bytes! # address
-  value: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type PlasmaVault @entity {
+  id: String!
+
+  name: String!
+  symbol: String!
+  decimals: Int!
+
+  tvl: BigDecimal!
+  apy: BigDecimal!
+
+  assetOld: BigDecimal!
+  assetNew: BigDecimal!
+  allocDatas: [BigDecimal!]!
+  newAllocDatas: [BigDecimal!]!
+
+  timestamp: BigInt!
+  createAtBlock: BigInt!
 }
 
-type AuthorityUpdated @entity(immutable: true) {
-  id: Bytes!
-  authority: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+type Vault @entity {
+  id: String!
+
+  name: String!
+  symbol: String!
+  decimals: Int!
+
+  tvl: BigDecimal!
+  apy: BigDecimal!
+  sharePrice: BigInt!
+
+  lastShareTimestamp: BigInt!
+  timestamp: BigInt!
 }
 
-type Deposit @entity(immutable: true) {
+type ApyAutoCompound @entity(immutable: true) {
+  "transactionhash-vaultaddress"
   id: Bytes!
-  sender: Bytes! # address
-  owner: Bytes! # address
-  assets: BigInt! # uint256
-  shares: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  vault: Vault!
+  apy: BigDecimal!
+  apr: BigDecimal!
+  diffSharePrice: BigDecimal!
+  diffTimestamp: BigDecimal!
+  timestamp: BigInt!
+  createAtBlock: BigInt!
 }
 
-type Initialized @entity(immutable: true) {
+type PlasmaVaultHistory @entity(immutable: true) {
+  "tx + vault address"
   id: Bytes!
-  version: BigInt! # uint64
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  tvl: BigDecimal!
+  apy: BigDecimal!
+  priceUnderlying: BigDecimal!
+  sharePrice: BigInt!
+
+  assetOld: BigDecimal!
+  assetNew: BigDecimal!
+  allocDatas: [BigDecimal!]!
+  newAllocDatas: [BigDecimal!]!
+
+  timestamp: BigInt!
+  createAtBlock: BigInt!
 }
 
-type ManagementFeeDataConfigured @entity(immutable: true) {
+type UserBalance @entity {
   id: Bytes!
-  feeAccount: Bytes! # address
-  feeInPercentage: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  userAddress: String!
+  value: BigDecimal!
+  timestamp: BigInt!
 }
 
-type ManagementFeeRealized @entity(immutable: true) {
+type UserBalanceHistory @entity(immutable: true) {
   id: Bytes!
-  unrealizedFeeInUnderlying: BigInt! # uint256
-  unrealizedFeeInShares: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type MarketBalancesUpdated @entity(immutable: true) {
-  id: Bytes!
-  marketIds: [BigInt!]! # uint256[]
-  deltaInUnderlying: BigInt! # int256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type MarketSubstratesGranted @entity(immutable: true) {
-  id: Bytes!
-  marketId: BigInt! # uint256
-  substrates: [Bytes!]! # bytes32[]
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type PerformanceFeeDataConfigured @entity(immutable: true) {
-  id: Bytes!
-  feeAccount: Bytes! # address
-  feeInPercentage: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type PriceOracleMiddlewareChanged @entity(immutable: true) {
-  id: Bytes!
-  newPriceOracleMiddleware: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type Transfer @entity(immutable: true) {
-  id: Bytes!
-  from: Bytes! # address
-  to: Bytes! # address
-  value: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type Withdraw @entity(immutable: true) {
-  id: Bytes!
-  sender: Bytes! # address
-  receiver: Bytes! # address
-  owner: Bytes! # address
-  assets: BigInt! # uint256
-  shares: BigInt! # uint256
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
-}
-
-type WithdrawManagerChanged @entity(immutable: true) {
-  id: Bytes!
-  newWithdrawManager: Bytes! # address
-  blockNumber: BigInt!
-  blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  userAddress: String!
+  value: BigDecimal!
+  timestamp: BigInt!
 }
