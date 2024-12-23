@@ -6,8 +6,8 @@ fi
 
 DEPLOY_STUDIO_CMD=$(grep '"deploy-studio":' package.json | sed 's/.*deploy-studio": "\(.*\)".*/\1/')
 
-VERSION=$(echo $DEPLOY_STUDIO_CMD | awk -F'--studio -l ' '{print $2}' | awk '{print $1}')
-NAME=$(echo $DEPLOY_STUDIO_CMD | awk -F'--studio -l [^ ]* ' '{print $2}' | awk '{print $1}')
+VERSION=$(echo $DEPLOY_STUDIO_CMD | awk -F'-l ' '{print $2}' | awk '{print $1}')
+NAME=$(echo $DEPLOY_STUDIO_CMD | awk -F'-l [^ ]* ' '{print $2}' | awk '{print $1}')
 
 COMMIT=$(git log -1 --pretty=%B)
 
