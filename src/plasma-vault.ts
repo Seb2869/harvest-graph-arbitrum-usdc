@@ -16,6 +16,7 @@ export function handleTransfer(event: Transfer): void {
     vault.name = vaultContract.name();
     vault.symbol = vaultContract.symbol();
     vault.decimals = vaultContract.decimals();
+    vault.historySequenceId = BigInt.fromI32(0);
     vault.tvl = BigDecimal.zero();
     vault.apy = BigDecimal.zero();
     vault.assetOld = BigDecimal.zero();
