@@ -7,6 +7,7 @@ type PlasmaVault @entity {
 
   tvl: BigDecimal!
   apy: BigDecimal!
+  historySequenceId: BigInt!
 
   assetOld: BigDecimal!
   assetNew: BigDecimal!
@@ -51,6 +52,7 @@ type PlasmaVaultHistory @entity(immutable: true) {
   apy: BigDecimal!
   priceUnderlying: BigDecimal!
   sharePrice: BigInt!
+  historySequenceId: BigInt!
 
   assetOld: BigDecimal!
   assetNew: BigDecimal!

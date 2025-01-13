@@ -40,6 +40,7 @@ export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void 
     vault.name = vaultContract.name();
     vault.symbol = vaultContract.symbol();
     vault.decimals = vaultContract.decimals();
+    vault.historySequenceId = BigInt.fromI32(0);
     vault.tvl = BigDecimal.zero();
     vault.apy = BigDecimal.zero();
     vault.assetOld = BigDecimal.zero();
@@ -108,6 +109,7 @@ export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void 
     apy = assetNew.minus(assetOld).div(assetOld).times(BD_ONE_HUNDRED);
   }
 
+  vault.historySequenceId = vault.historySequenceId.plus(BigInt.fromI32(1));
   vault.assetOld = assetOld;
   vault.assetNew = assetNew;
   vault.apy = apy;
@@ -118,6 +120,7 @@ export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void 
   const vaultHistory = new PlasmaVaultHistory(stringIdToBytes(`${event.transaction.hash.toHex()}-${event.address.toHexString()}`));
   vaultHistory.tvl = vault.tvl;
   vaultHistory.apy = vault.apy;
+  vaultHistory.historySequenceId = vault.historySequenceId;
   vaultHistory.priceUnderlying = BigDecimal.fromString('1');
   vaultHistory.sharePrice = totalSharePrice.div(BigInt.fromI32(allocDatas.length));
   vaultHistory.assetOld = vault.assetOld;
