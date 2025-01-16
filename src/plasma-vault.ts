@@ -29,7 +29,8 @@ export function handleTransfer(event: Transfer): void {
   createUserBalance(event.params.from, event.params.value, event.block.timestamp, false);
   createUserBalance(event.params.to, event.params.value, event.block.timestamp, true);
 
-  vault.tvl = vaultContract.totalAssets().divDecimal(pow(BD_TEN, vault.decimals));
+  // for USDC use 6 decimals
+  vault.tvl = vaultContract.totalAssets().divDecimal(pow(BD_TEN, 6));
   vault.save();
 }
 
@@ -57,7 +58,6 @@ export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void 
   let assetNew = BigDecimal.zero();
   const allocDatas: BigDecimal[] = [];
   const newAllocDatas: BigDecimal[] = [];
-  let totalSharePrice = BigInt.zero();
 
   const fuses = vaultContract.getInstantWithdrawalFuses();
   for (let i = 0; i < fuses.length; i++) {
@@ -79,7 +79,6 @@ export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void 
     log.log(log.Level.INFO, `Market id ${marketId.toString()}`);
 
     const hVault = getOrCreateVault(Address.fromString(pVault), event.block.timestamp);
-    totalSharePrice = totalSharePrice.plus(hVault.sharePrice);
 
     if (hVault != null) {
       log.log(log.Level.INFO, `Vault ${pVault} found, market id ${marketId.toString()}`);
@@ -123,7 +122,7 @@ export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void 
   vaultHistory.apy = vault.apy;
   vaultHistory.historySequenceId = vault.historySequenceId;
   vaultHistory.priceUnderlying = BigDecimal.fromString('1');
-  vaultHistory.sharePrice = totalSharePrice.div(BigInt.fromI32(allocDatas.length));
+  vaultHistory.sharePrice = vaultContract.totalAssets().divDecimal(pow(BD_TEN, 6)).div(vaultContract.totalSupply().divDecimal(pow(BD_TEN, 8)));
   vaultHistory.assetOld = vault.assetOld;
   vaultHistory.assetNew = vault.assetNew;
   vaultHistory.allocDatas = vault.allocDatas;
