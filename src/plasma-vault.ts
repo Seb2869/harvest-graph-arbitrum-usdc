@@ -3,9 +3,9 @@ import { PlasmaVault, PlasmaVaultHistory, UserBalance, UserBalanceHistory, Vault
 import { Address, BigDecimal, BigInt, log } from '@graphprotocol/graph-ts';
 import { stringIdToBytes } from './utils/IdUtils';
 import { PlasmaVaultContract } from '../generated/PlasmaVault/PlasmaVaultContract';
-import { pow, powBI } from './utils/MathUtils';
+import { bdToBI, pow, powBI } from './utils/MathUtils';
 import { FuseContract } from '../generated/PlasmaVault/FuseContract';
-import { BD_ONE_HUNDRED, BD_TEN, BD_ZERO } from './utils/Constant';
+import { BD_ONE_HUNDRED, BD_TEN, BD_ZERO, BI_TEN } from './utils/Constant';
 import { getOrCreateVault } from './utils/VaultUtils';
 
 export function handleTransfer(event: Transfer): void {
@@ -122,11 +122,12 @@ export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void 
   vaultHistory.apy = vault.apy;
   vaultHistory.historySequenceId = vault.historySequenceId;
   vaultHistory.priceUnderlying = BigDecimal.fromString('1');
-  vaultHistory.sharePrice =
-    BigInt.fromI64(+vaultContract.totalAssets()
-      .divDecimal(pow(BD_TEN, 6))
+  vaultHistory.sharePrice = bdToBI(
+    vaultContract.totalAssets().
+    divDecimal(pow(BD_TEN, 6))
       .div(vaultContract.totalSupply().divDecimal(pow(BD_TEN, 8)))
-      .times(pow(BD_TEN, 6)).toString());
+      .times(pow(BD_TEN, 6))
+  );
   vaultHistory.assetOld = vault.assetOld;
   vaultHistory.assetNew = vault.assetNew;
   vaultHistory.allocDatas = vault.allocDatas;
