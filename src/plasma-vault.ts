@@ -122,7 +122,11 @@ export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void 
   vaultHistory.apy = vault.apy;
   vaultHistory.historySequenceId = vault.historySequenceId;
   vaultHistory.priceUnderlying = BigDecimal.fromString('1');
-  vaultHistory.sharePrice = vaultContract.totalAssets().divDecimal(pow(BD_TEN, 6)).div(vaultContract.totalSupply().divDecimal(pow(BD_TEN, 8)));
+  vaultHistory.sharePrice =
+    vaultContract.totalAssets()
+    .divDecimal(pow(BD_TEN, 6))
+    .div(vaultContract.totalSupply().divDecimal(pow(BD_TEN, 8)))
+      .times(pow(BD_TEN, 6)).digits;
   vaultHistory.assetOld = vault.assetOld;
   vaultHistory.assetNew = vault.assetNew;
   vaultHistory.allocDatas = vault.allocDatas;
