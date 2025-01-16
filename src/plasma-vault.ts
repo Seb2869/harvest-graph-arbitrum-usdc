@@ -123,7 +123,7 @@ export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void 
   vaultHistory.historySequenceId = vault.historySequenceId;
   vaultHistory.priceUnderlying = BigDecimal.fromString('1');
   vaultHistory.sharePrice =
-    BigInt.fromString(vaultContract.totalAssets()
+    BigInt.fromI64(+vaultContract.totalAssets()
       .divDecimal(pow(BD_TEN, 6))
       .div(vaultContract.totalSupply().divDecimal(pow(BD_TEN, 8)))
       .times(pow(BD_TEN, 6)).toString());
