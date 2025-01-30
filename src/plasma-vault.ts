@@ -5,8 +5,9 @@ import { stringIdToBytes } from './utils/IdUtils';
 import { PlasmaVaultContract } from '../generated/PlasmaVault/PlasmaVaultContract';
 import { bdToBI, pow, powBI } from './utils/MathUtils';
 import { FuseContract } from '../generated/PlasmaVault/FuseContract';
-import { BD_ONE_HUNDRED, BD_TEN, BD_ZERO, BI_TEN } from './utils/Constant';
+import { BD_18, BD_ONE_HUNDRED, BD_TEN, BD_ZERO, BI_TEN } from './utils/Constant';
 import { getOrCreateVault } from './utils/VaultUtils';
+import { getPriceForCoin } from './utils/PriceUtils';
 
 export function handleTransfer(event: Transfer): void {
   const vaultContract = PlasmaVaultContract.bind(event.address);
@@ -29,8 +30,23 @@ export function handleTransfer(event: Transfer): void {
   createUserBalance(event.params.from, event.params.value, event.block.timestamp, false);
   createUserBalance(event.params.to, event.params.value, event.block.timestamp, true);
 
-  // for USDC use 6 decimals
-  vault.tvl = vaultContract.totalAssets().divDecimal(pow(BD_TEN, 6));
+  const fuses = vaultContract.getInstantWithdrawalFuses();
+  let underlyingDecimal = 18;
+  for (let i = 0; i < fuses.length; i++) {
+    const fuseContract = FuseContract.bind(fuses[i]);
+    const marketId = fuseContract.MARKET_ID();
+    // TODO change logic
+    const pVaultTemp = vaultContract.getInstantWithdrawalFusesParams(fuses[i], BigInt.fromI32(i))[1].toHexString().slice(26)
+    const pVault = '0x' + pVaultTemp
+    const hVault = getOrCreateVault(Address.fromString(pVault), event.block.timestamp);
+    if (hVault != null) {
+      underlyingDecimal = hVault.decimals
+      break;
+    }
+  }
+  const price = getPriceForCoin(Address.fromString(vault.id)).divDecimal(BD_18);
+
+  vault.tvl = vaultContract.totalAssets().divDecimal(pow(BD_TEN, underlyingDecimal)).times(price);
   vault.save();
 }
 
@@ -60,6 +76,7 @@ export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void 
   const newAllocDatas: BigDecimal[] = [];
 
   const fuses = vaultContract.getInstantWithdrawalFuses();
+  let underlyingDecimal = 18;
   for (let i = 0; i < fuses.length; i++) {
     const fuseContract = FuseContract.bind(fuses[i]);
     const marketId = fuseContract.MARKET_ID();
@@ -91,6 +108,7 @@ export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void 
         assetNew = assetNew.plus(tempAssetNew.div(BD_ONE_HUNDRED));
       }
       allocDatas.push(marketInAsset);
+      underlyingDecimal = hVault.decimals;
     } else {
       log.log(log.Level.WARNING, `Can not find vault ${pVault}`);
     }
@@ -121,12 +139,12 @@ export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void 
   vaultHistory.tvl = vault.tvl;
   vaultHistory.apy = vault.apy;
   vaultHistory.historySequenceId = vault.historySequenceId;
-  vaultHistory.priceUnderlying = BigDecimal.fromString('1');
+  vaultHistory.priceUnderlying = getPriceForCoin(Address.fromString(vault.id)).divDecimal(BD_18);
   vaultHistory.sharePrice = bdToBI(
     vaultContract.totalAssets().
-    divDecimal(pow(BD_TEN, 6))
-      .div(vaultContract.totalSupply().divDecimal(pow(BD_TEN, 8)))
-      .times(pow(BD_TEN, 6))
+    divDecimal(pow(BD_TEN, underlyingDecimal))
+      .div(vaultContract.totalSupply().divDecimal(pow(BD_TEN, vault.decimals)))
+      .times(pow(BD_TEN, underlyingDecimal))
   );
   vaultHistory.assetOld = vault.assetOld;
   vaultHistory.assetNew = vault.assetNew;

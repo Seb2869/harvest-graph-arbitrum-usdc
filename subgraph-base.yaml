@@ -1,0 +1,158 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: UsdcPlasmaVault
+    network: base
+    source:
+      address: "0xD00E821C550Ce92EbD4A70bEcb02657dA7A5c562"
+      abi: PlasmaVaultContract
+      startBlock: 25642488
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - PlasmaVault
+      abis:
+        - name: PlasmaVaultContract
+          file: ./abis/PlasmaVault.json
+        - name: FuseContract
+          file: ./abis/Fuse.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+        - name: VaultContract
+          file: ./abis/Vault.json
+        - name: PancakeFactoryContract
+          file: ./abis/PancakeFactory.json
+        - name: PancakePairContract
+          file: ./abis/PancakePair.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+        - event: MarketBalancesUpdated(uint256[],int256)
+          handler: handleMarketBalancesUpdated
+      file: ./src/plasma-vault.ts
+  - kind: ethereum
+    name: WethPlasmaVault
+    network: base
+    source:
+      address: "0x31A36d3eAB4A8e0d365eB72EE9079603aF6C421c"
+      abi: PlasmaVaultContract
+      startBlock: 25642563
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - PlasmaVault
+      abis:
+        - name: PlasmaVaultContract
+          file: ./abis/PlasmaVault.json
+        - name: FuseContract
+          file: ./abis/Fuse.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+        - name: VaultContract
+          file: ./abis/Vault.json
+        - name: PancakeFactoryContract
+          file: ./abis/PancakeFactory.json
+        - name: PancakePairContract
+          file: ./abis/PancakePair.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+        - event: MarketBalancesUpdated(uint256[],int256)
+          handler: handleMarketBalancesUpdated
+      file: ./src/plasma-vault.ts
+  - kind: ethereum
+    name: CbBtcPlasmaVault
+    network: base
+    source:
+      address: "0x370A3D2800b1ea990634835a5709fB31082de6d9"
+      abi: PlasmaVaultContract
+      startBlock: 25642639
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - PlasmaVault
+      abis:
+        - name: PlasmaVaultContract
+          file: ./abis/PlasmaVault.json
+        - name: FuseContract
+          file: ./abis/Fuse.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+        - name: VaultContract
+          file: ./abis/Vault.json
+        - name: PancakeFactoryContract
+          file: ./abis/PancakeFactory.json
+        - name: PancakePairContract
+          file: ./abis/PancakePair.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+        - event: MarketBalancesUpdated(uint256[],int256)
+          handler: handleMarketBalancesUpdated
+      file: ./src/plasma-vault.ts
+  - kind: ethereum
+    name: Controller
+    network: base
+    source:
+      address: "0xf90ff0f7c8db52bf1bf869f74226ead125efa745"
+      startBlock: 25642488
+      abi: ControllerContract
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+      abis:
+        - name: ControllerContract
+          file: ./abis/Controller.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+        - name: VaultContract
+          file: ./abis/Vault.json
+        - name: PancakeFactoryContract
+          file: ./abis/PancakeFactory.json
+        - name: PancakePairContract
+          file: ./abis/PancakePair.json
+      eventHandlers:
+        - event: SharePriceChangeLog(indexed address,indexed address,uint256,uint256,uint256)
+          handler: handleSharePriceChangeLog
+      file: ./src/controller.ts
+  - kind: ethereum
+    name: MegaFactory
+    network: base
+    source:
+      address: "0x11cb7edA79C3B5f55B2BB501EB0Cf2d605259cf3"
+      startBlock: 25642488
+      abi: MegaFactoryContract
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+      abis:
+        - name: MegaFactoryContract
+          file: ./abis/MegaFactory.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+        - name: VaultContract
+          file: ./abis/Vault.json
+        - name: PancakeFactoryContract
+          file: ./abis/PancakeFactory.json
+        - name: PancakePairContract
+          file: ./abis/PancakePair.json
+      eventHandlers:
+        - event: DeploymentCompleted(string)
+          handler: handleDeploymentCompleted
+      file: ./src/mega-factory.ts

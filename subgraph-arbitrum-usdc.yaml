@@ -1,0 +1,94 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: PlasmaVault
+    network: arbitrum-one
+    source:
+      address: "0x7fbfd8cda97c0221b39c581c34afd24c523a3990"
+      abi: PlasmaVaultContract
+      startBlock: 266838944
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - PlasmaVault
+      abis:
+        - name: PlasmaVaultContract
+          file: ./abis/PlasmaVault.json
+        - name: FuseContract
+          file: ./abis/Fuse.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+        - name: VaultContract
+          file: ./abis/Vault.json
+        - name: PancakeFactoryContract
+          file: ./abis/PancakeFactory.json
+        - name: PancakePairContract
+          file: ./abis/PancakePair.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+        - event: MarketBalancesUpdated(uint256[],int256)
+          handler: handleMarketBalancesUpdated
+      file: ./src/plasma-vault.ts
+  - kind: ethereum
+    name: Controller
+    network: arbitrum-one
+    source:
+      address: "0x68B2FC1566f411C1Af8fF5bFDA3dD4F3F3e59D03"
+      startBlock: 266838944
+      abi: ControllerContract
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+      abis:
+        - name: ControllerContract
+          file: ./abis/Controller.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+        - name: VaultContract
+          file: ./abis/Vault.json
+        - name: PancakeFactoryContract
+          file: ./abis/PancakeFactory.json
+        - name: PancakePairContract
+          file: ./abis/PancakePair.json
+      eventHandlers:
+        - event: SharePriceChangeLog(indexed address,indexed address,uint256,uint256,uint256)
+          handler: handleSharePriceChangeLog
+      file: ./src/controller.ts
+  - kind: ethereum
+    name: MegaFactory
+    network: arbitrum-one
+    source:
+      address: "0x344aecfdb8894e82178bc45ce35ff7741b6aa527"
+      startBlock: 266838944
+      abi: MegaFactoryContract
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+      abis:
+        - name: MegaFactoryContract
+          file: ./abis/MegaFactory.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+        - name: VaultContract
+          file: ./abis/Vault.json
+        - name: PancakeFactoryContract
+          file: ./abis/PancakeFactory.json
+        - name: PancakePairContract
+          file: ./abis/PancakePair.json
+      eventHandlers:
+        - event: DeploymentCompleted(string)
+          handler: handleDeploymentCompleted
+      file: ./src/mega-factory.ts
