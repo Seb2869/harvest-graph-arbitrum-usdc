@@ -53,6 +53,7 @@ type PlasmaVaultHistory @entity(immutable: true) {
   priceUnderlying: BigDecimal!
   sharePrice: BigInt!
   historySequenceId: BigInt!
+  plasmaVault: PlasmaVault!
 
   assetOld: BigDecimal!
   assetNew: BigDecimal!
@@ -66,6 +67,7 @@ type PlasmaVaultHistory @entity(immutable: true) {
 type UserBalance @entity {
   id: Bytes!
   userAddress: String!
+  plasmaVault: PlasmaVault!
   value: BigDecimal!
   timestamp: BigInt!
 }
@@ -73,6 +75,7 @@ type UserBalance @entity {
 type UserBalanceHistory @entity(immutable: true) {
   id: Bytes!
   userAddress: String!
+  plasmaVault: PlasmaVault!
   value: BigDecimal!
   timestamp: BigInt!
 }

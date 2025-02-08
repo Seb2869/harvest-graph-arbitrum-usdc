@@ -8,6 +8,7 @@ import { FuseContract } from '../generated/PlasmaVault/FuseContract';
 import { BD_18, BD_ONE_HUNDRED, BD_TEN, BD_ZERO, BI_TEN } from './utils/Constant';
 import { getOrCreateVault } from './utils/VaultUtils';
 import { getPriceForCoin } from './utils/PriceUtils';
+import { ERC20 } from '../generated/PlasmaVault/ERC20';
 
 export function handleTransfer(event: Transfer): void {
   const vaultContract = PlasmaVaultContract.bind(event.address);
@@ -27,8 +28,12 @@ export function handleTransfer(event: Transfer): void {
     vault.timestamp = event.block.timestamp;
     vault.createAtBlock = event.block.number;
   }
-  createUserBalance(event.params.from, event.params.value, event.block.timestamp, false);
-  createUserBalance(event.params.to, event.params.value, event.block.timestamp, true);
+  if (event.params.from != Address.zero()) {
+    createUserBalance(vault, event.params.from, event.params.value, event.block.timestamp, false);
+  }
+  if (event.params.to == Address.zero()) {
+    createUserBalance(vault, event.params.to, event.params.value, event.block.timestamp, true);
+  }
 
   const fuses = vaultContract.getInstantWithdrawalFuses();
   let underlyingDecimal = 18;
@@ -138,6 +143,7 @@ export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void 
   const vaultHistory = new PlasmaVaultHistory(stringIdToBytes(`${event.transaction.hash.toHex()}-${event.address.toHexString()}`));
   vaultHistory.tvl = vault.tvl;
   vaultHistory.apy = vault.apy;
+  vaultHistory.plasmaVault = vault.id;
   vaultHistory.historySequenceId = vault.historySequenceId;
   vaultHistory.priceUnderlying = getPriceForCoin(Address.fromString(vault.id)).divDecimal(BD_18);
   vaultHistory.sharePrice = bdToBI(
@@ -155,26 +161,28 @@ export function handleMarketBalancesUpdated(event: MarketBalancesUpdated): void 
   vaultHistory.save();
 }
 
-function createUserBalance(user: Address, amount: BigInt, timestamp: BigInt, isDeposit: boolean): void {
-  let userBalance = UserBalance.load(stringIdToBytes(user.toHexString()));
+function createUserBalance(plasmaVault: PlasmaVault, user: Address, amount: BigInt, timestamp: BigInt, isDeposit: boolean): void {
+  let userBalance = UserBalance.load(stringIdToBytes(plasmaVault.id + '-' + user.toHexString()));
   if (userBalance == null) {
     userBalance = new UserBalance(stringIdToBytes(user.toHexString()));
     userBalance.userAddress = user.toHexString();
+    userBalance.plasmaVault = plasmaVault.id;
     userBalance.value = BigDecimal.zero();
     userBalance.timestamp = timestamp;
   }
 
-  if (isDeposit) {
-    userBalance.value = userBalance.value.plus(amount.toBigDecimal());
-  } else {
-    userBalance.value = userBalance.value.minus(amount.toBigDecimal());
+  const value = ERC20.bind(Address.fromString(plasmaVault.id)).balanceOf(user);
+  let valueBD = BigDecimal.zero();
+  if (value.gt(BigInt.zero())) {
+    valueBD = value.divDecimal(pow(BD_TEN, plasmaVault.decimals));
   }
-
+  userBalance.value = valueBD;
   userBalance.save();
 
-  const userBalanceHistory = new UserBalanceHistory(stringIdToBytes(`${user.toHexString()}-${timestamp.toString()}-${amount.toString()}`));
+  const userBalanceHistory = new UserBalanceHistory(stringIdToBytes(`${plasmaVault.id}-${user.toHexString()}-${timestamp.toString()}-${amount.toString()}`));
   userBalanceHistory.userAddress = user.toHexString();
   userBalanceHistory.value = userBalance.value;
+  userBalanceHistory.plasmaVault = plasmaVault.id;
   userBalanceHistory.timestamp = timestamp;
   userBalanceHistory.save();
 }
