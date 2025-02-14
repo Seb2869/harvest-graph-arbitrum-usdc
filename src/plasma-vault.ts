@@ -31,7 +31,7 @@ export function handleTransfer(event: Transfer): void {
   if (event.params.from != Address.zero()) {
     createUserBalance(vault, event.params.from, event.params.value, event.block.timestamp, false);
   }
-  if (event.params.to == Address.zero()) {
+  if (event.params.to != Address.zero()) {
     createUserBalance(vault, event.params.to, event.params.value, event.block.timestamp, true);
   }
 
@@ -171,12 +171,7 @@ function createUserBalance(plasmaVault: PlasmaVault, user: Address, amount: BigI
     userBalance.timestamp = timestamp;
   }
 
-  const value = ERC20.bind(Address.fromString(plasmaVault.id)).balanceOf(user);
-  let valueBD = BigDecimal.zero();
-  if (value.gt(BigInt.zero())) {
-    valueBD = value.divDecimal(pow(BD_TEN, plasmaVault.decimals));
-  }
-  userBalance.value = valueBD;
+  userBalance.value = ERC20.bind(Address.fromString(plasmaVault.id)).balanceOf(user).toBigDecimal();
   userBalance.save();
 
   const userBalanceHistory = new UserBalanceHistory(stringIdToBytes(`${plasmaVault.id}-${user.toHexString()}-${timestamp.toString()}-${amount.toString()}`));
